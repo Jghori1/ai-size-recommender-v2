@@ -55,24 +55,28 @@ FEATURE_COLS = [
 ]
 
 # Fetch image from Pexels
-@st.cache_data
 def get_clothing_image(category):
     try:
         api_key = st.secrets.get("PEXELS_API_KEY")
         if not api_key:
+            st.warning("API key not found")
             return None
         
         url = "https://api.pexels.com/v1/search"
         headers = {"Authorization": api_key}
-        params = {"query": f"{category} clothing fashion", "per_page": 1}
+        params = {"query": f"{category} woman", "per_page": 1}
         
-        response = requests.get(url, headers=headers, params=params, timeout=5)
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        
         if response.status_code == 200:
-            photos = response.json().get('photos', [])
-            if photos:
-                return photos[0]['src']['medium']
+            data = response.json()
+            if data.get('photos'):
+                img_url = data['photos'][0]['src']['medium']
+                return img_url
+        else:
+            st.warning(f"Pexels API error: {response.status_code}")
     except Exception as e:
-        print(f"Error fetching image: {e}")
+        st.warning(f"Image fetch error: {e}")
     
     return None
 
@@ -97,22 +101,17 @@ with col3:
     item_id = st.text_input("Item ID", "126335")
     category = st.selectbox("Category", ["dress", "top", "bottom", "jacket", "intimate"])
     
-    # Display item image from Pexels
-    img_url = get_clothing_image(category)
-    if img_url:
-        try:
-            response = requests.get(img_url, timeout=5)
-            if response.status_code == 200:
-                img = Image.open(BytesIO(response.content))
-                st.image(img, caption=f"{category.title()}", use_column_width=True)
-        except Exception as e:
+    # Display item image
+    with st.spinner(f"Loading {category} image..."):
+        img_url = get_clothing_image(category)
+        if img_url:
+            st.image(img_url, caption=f"{category.title()}", use_column_width=True)
+        else:
             st.info(f"📸 {category.title()}")
-    else:
-        st.info(f"📸 {category.title()}")
 
 # Predict button
 st.markdown("---")
-if st.button("🔮 Get Size Recommendation", use_container_width=True, key="predict_btn"):
+if st.button("🔮 Get Size Recommendation", use_container_width=True):
     try:
         cup_map = {"AA": 0.5, "A": 1, "B": 2, "C": 3, "D": 4, "DD": 5, "DDD": 6, "E": 5, "F": 6, "G": 7, "H": 8, "I": 9, "J": 10}
         bust_cup_num = cup_map.get(bust_cup, 3)
