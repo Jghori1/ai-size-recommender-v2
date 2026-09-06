@@ -100,72 +100,71 @@ with col2:
 
 st.markdown("---")
 
-col3, col4 = st.columns([2, 1])
+st.subheader("👕 Item Details")
+item_id = st.text_input(
+    "🏷️ Item ID (optional)",
+    value="126335"
+)
 
-with col3:
-    item_id = st.text_input(
-        "🏷️ Item ID (optional)",
-        value="126335"
-    )
+st.markdown("---")
 
-with col4:
-    st.write("")
-    st.write("")
-    if st.button("✨ Find My Perfect Size", use_container_width=True):
-        try:
-            cup_map = {"AA": 0.5, "A": 1, "B": 2, "C": 3, "D": 4, "DD": 5, "DDD": 6, "E": 5, "F": 6, "G": 7, "H": 8, "I": 9, "J": 10}
-            bust_cup_num = cup_map.get(bust_cup, 3)
-            
-            user_measurements = {
-                "height_in": float(height),
-                "weight_lb": float(weight),
-                "bust_band": float(bust_band),
-                "bust_cup": bust_cup_num,
-                "age": int(age),
-                "body_type": body_type,
-                "rented_for": rented_for,
-            }
-            
-            result = recommend_size(
-                model=MODEL,
-                user_measurements=user_measurements,
-                item_id=item_id,
-                item_category=category,
-                candidate_sizes=[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
-                item_stats=ITEM_STATS,
-                cat_stats=CAT_STATS,
-                global_avg=GLOBAL_AVG,
-                feature_cols=FEATURE_COLS,
-            )
-            
-            st.success("✅ Recommendation Ready!")
-            st.markdown("---")
-            
-            col_rec, col_conf, col_known = st.columns(3)
-            
-            with col_rec:
-                st.metric("📏 Recommended Size", result['recommended_size'])
-            
-            with col_conf:
-                confidence_pct = f"{result['confidence']:.1%}"
-                st.metric("🎯 Confidence", confidence_pct)
-            
-            with col_known:
-                status = "✅ Yes" if result['item_known'] else "❌ No"
-                st.metric("📊 In Database", status)
-            
-            st.markdown("---")
-            
-            if result['alternatives']:
-                st.subheader("🤔 Other Sizes to Consider")
-                for alt in result['alternatives'][:3]:
-                    st.write(f"• **Size {alt['size']}** — {alt['confidence']:.1%} match")
-            
-            st.markdown("---")
-            st.info("💡 **Tip:** Sizing can vary by brand and style. Always check the item's specific size guide!")
+if st.button("✨ Find My Perfect Size", use_container_width=True):
+    try:
+        cup_map = {"AA": 0.5, "A": 1, "B": 2, "C": 3, "D": 4, "DD": 5, "DDD": 6, "E": 5, "F": 6, "G": 7, "H": 8, "I": 9, "J": 10}
+        bust_cup_num = cup_map.get(bust_cup, 3)
         
-        except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
+        user_measurements = {
+            "height_in": float(height),
+            "weight_lb": float(weight),
+            "bust_band": float(bust_band),
+            "bust_cup": bust_cup_num,
+            "age": int(age),
+            "body_type": body_type,
+            "rented_for": rented_for,
+        }
+        
+        result = recommend_size(
+            model=MODEL,
+            user_measurements=user_measurements,
+            item_id=item_id,
+            item_category=category,
+            candidate_sizes=[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+            item_stats=ITEM_STATS,
+            cat_stats=CAT_STATS,
+            global_avg=GLOBAL_AVG,
+            feature_cols=FEATURE_COLS,
+        )
+        
+        st.success("✅ Recommendation Ready!")
+        st.markdown("---")
+        
+        st.subheader("📊 Your Results")
+        
+        col_rec, col_conf, col_known = st.columns(3)
+        
+        with col_rec:
+            st.metric("📏 Recommended Size", result['recommended_size'])
+        
+        with col_conf:
+            confidence_pct = f"{result['confidence']:.1%}"
+            st.metric("🎯 Confidence", confidence_pct)
+        
+        with col_known:
+            status = "✅ Yes" if result['item_known'] else "❌ No"
+            st.metric("📊 In Database", status)
+        
+        st.markdown("---")
+        
+        if result['alternatives']:
+            st.subheader("🤔 Other Sizes to Consider")
+            for alt in result['alternatives'][:3]:
+                st.write(f"• **Size {alt['size']}** — {alt['confidence']:.1%} match")
+        
+        st.markdown("---")
+        st.info("💡 **Tip:** Sizing can vary by brand and style. Always check the item's specific size guide!")
+    
+    except Exception as e:
+        st.error(f"❌ Error: {str(e)}")
 
 st.markdown("---")
 st.markdown("<p style='text-align: center; color: gray;'>Made with ❤️ | Powered by Machine Learning</p>", unsafe_allow_html=True)
