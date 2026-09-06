@@ -3,9 +3,6 @@ import joblib
 import pickle
 import sys
 import os
-from PIL import Image
-from io import BytesIO
-import requests
 
 sys.path.insert(0, '.')
 
@@ -19,11 +16,8 @@ st.write("Get personalized clothing size recommendations based on your measureme
 # Load model and data
 @st.cache_resource
 def load_models():
-    print("Loading models...")
-    
     model_path = "models/size_model_rf.joblib"
     if not os.path.exists(model_path):
-        print("Downloading model from Google Drive...")
         import gdown
         file_id = "1Gls9ZEfiqPSYQChcJmSeSRBf1J1KjvRu"
         url = f"https://drive.google.com/uc?id={file_id}"
@@ -31,9 +25,7 @@ def load_models():
         gdown.download(url, model_path, quiet=False)
     
     MODEL = joblib.load(model_path)
-    print("✓ Model loaded")
     
-    print("Loading item stats...")
     with open("data/processed/item_stats.pkl", "rb") as f:
         ITEM_STATS, CAT_STATS, GLOBAL_AVG = pickle.load(f)
     
@@ -54,33 +46,8 @@ FEATURE_COLS = [
     "body_type", "category", "rented_for",
 ]
 
-# Fetch image from Pexels
-def get_clothing_image(category):
-    try:
-        api_key = st.secrets.get("PEXELS_API_KEY")
-        if not api_key:
-            return None
-        
-        url = "https://api.pexels.com/v1/search"
-        headers = {"Authorization": api_key}
-        params = {"query": f"{category} woman", "per_page": 1}
-        
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if data.get('photos'):
-                img_url = data['photos'][0]['src']['medium']
-                img_response = requests.get(img_url, timeout=10)
-                if img_response.status_code == 200:
-                    return Image.open(BytesIO(img_response.content))
-    except Exception as e:
-        pass
-    
-    return None
-
 # User inputs
-col1, col2, col3 = st.columns([1, 1, 1.2])
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.subheader("👤 Your Measurements")
@@ -99,13 +66,6 @@ with col3:
     st.subheader("👗 Item Details")
     item_id = st.text_input("Item ID", "126335")
     category = st.selectbox("Category", ["dress", "top", "bottom", "jacket", "intimate"])
-    
-    # Display item image
-    img = get_clothing_image(category)
-    if img:
-        st.image(img, caption=f"{category.title()}", use_column_width=True)
-    else:
-        st.info(f"📸 {category.title()}")
 
 # Predict button
 st.markdown("---")
@@ -158,4 +118,4 @@ if st.button("🔮 Get Size Recommendation", use_container_width=True):
         st.error(f"❌ Error: {str(e)}")
 
 st.markdown("---")
-st.markdown("<p style='text-align: center'>Made with ❤️ using Streamlit | ML Model: Random Forest Classifier</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center'>Made with ❤️ | Random Forest ML Model</p>", unsafe_allow_html=True)
