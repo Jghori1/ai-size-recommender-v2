@@ -2,6 +2,7 @@ import streamlit as st
 import joblib
 import pickle
 import sys
+import os
 sys.path.insert(0, '.')
 
 from src.inference import recommend_size
@@ -14,8 +15,20 @@ st.write("Get personalized clothing size recommendations based on your measureme
 # Load model and data
 @st.cache_resource
 def load_models():
-    print("Loading model...")
-    MODEL = joblib.load("models/size_model_rf.joblib")
+    print("Loading models...")
+    
+    # Download model from Google Drive if not local
+    model_path = "models/size_model_rf.joblib"
+    if not os.path.exists(model_path):
+        print("Downloading model from Google Drive...")
+        import gdown
+        file_id = "1Gls9ZEfiqPSYQChcJmSeSRBf1J1KjvRu"
+        url = f"https://drive.google.com/uc?id={file_id}"
+        os.makedirs("models", exist_ok=True)
+        gdown.download(url, model_path, quiet=False)
+    
+    MODEL = joblib.load(model_path)
+    print("✓ Model loaded")
     
     print("Loading item stats...")
     with open("data/processed/item_stats.pkl", "rb") as f:
@@ -23,7 +36,11 @@ def load_models():
     
     return MODEL, ITEM_STATS, CAT_STATS, GLOBAL_AVG
 
-MODEL, ITEM_STATS, CAT_STATS, GLOBAL_AVG = load_models()
+try:
+    MODEL, ITEM_STATS, CAT_STATS, GLOBAL_AVG = load_models()
+except Exception as e:
+    st.error(f"Failed to load model: {e}")
+    st.stop()
 
 FEATURE_COLS = [
     "height_in", "weight_lb", "bmi", "weight_per_inch",
