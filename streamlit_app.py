@@ -59,7 +59,6 @@ def get_clothing_image(category):
     try:
         api_key = st.secrets.get("PEXELS_API_KEY")
         if not api_key:
-            st.warning("API key not found")
             return None
         
         url = "https://api.pexels.com/v1/search"
@@ -72,11 +71,11 @@ def get_clothing_image(category):
             data = response.json()
             if data.get('photos'):
                 img_url = data['photos'][0]['src']['medium']
-                return img_url
-        else:
-            st.warning(f"Pexels API error: {response.status_code}")
+                img_response = requests.get(img_url, timeout=10)
+                if img_response.status_code == 200:
+                    return Image.open(BytesIO(img_response.content))
     except Exception as e:
-        st.warning(f"Image fetch error: {e}")
+        pass
     
     return None
 
@@ -102,12 +101,11 @@ with col3:
     category = st.selectbox("Category", ["dress", "top", "bottom", "jacket", "intimate"])
     
     # Display item image
-    with st.spinner(f"Loading {category} image..."):
-        img_url = get_clothing_image(category)
-        if img_url:
-            st.image(img_url, caption=f"{category.title()}", use_column_width=True)
-        else:
-            st.info(f"📸 {category.title()}")
+    img = get_clothing_image(category)
+    if img:
+        st.image(img, caption=f"{category.title()}", use_column_width=True)
+    else:
+        st.info(f"📸 {category.title()}")
 
 # Predict button
 st.markdown("---")
