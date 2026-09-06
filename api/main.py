@@ -51,37 +51,31 @@ class SizeRecommendationResponse(BaseModel):
     item_known: bool
     model_version: str
 
-def download_model_from_drive():
-    """Download model from Google Drive if not local"""
-    model_path = "models/size_model_rf.joblib"
-    
-    if os.path.exists(model_path):
-        print(f"✓ Model found locally at {model_path}")
-        return
-    
-    print("Downloading model from Google Drive...")
-    try:
-        import gdown
-        file_id = "1Gls9ZEfiqPSYQChcJmSeSRBf1J1KjvRu"
-        url = f"https://drive.google.com/uc?id={file_id}"
-        os.makedirs("models", exist_ok=True)
-        gdown.download(url, model_path, quiet=False)
-        print(f"✓ Model downloaded to {model_path}")
-    except Exception as e:
-        print(f"✗ Failed to download model: {e}")
-        raise
-
 @app.on_event("startup")
 async def load_model():
     global MODEL, ITEM_STATS, CAT_STATS, GLOBAL_AVG, FEATURE_COLS
     
     try:
-        print("Checking for model...")
-        download_model_from_drive()
-        
         print("Loading model...")
-        MODEL = joblib.load("models/size_model_rf.joblib")
-        print("✓ Model loaded successfully")
+        
+        # Check if model exists locally
+        if os.path.exists("models/size_model_rf.joblib"):
+            print("Loading local model...")
+            MODEL = joblib.load("models/size_model_rf.joblib")
+            print("✓ Local model loaded")
+        else:
+            print("Local model not found, downloading from Google Drive...")
+            try:
+                import gdown
+                file_id = "1Gls9ZEfiqPSYQChcJmSeSRBf1J1KjvRu"
+                url = f"https://drive.google.com/uc?id={file_id}"
+                os.makedirs("models", exist_ok=True)
+                gdown.download(url, "models/size_model_rf.joblib", quiet=False)
+                MODEL = joblib.load("models/size_model_rf.joblib")
+                print("✓ Model downloaded and loaded")
+            except Exception as e:
+                print(f"Failed to download model: {e}")
+                print("Continuing without model...")
         
         print("Loading item stats...")
         with open("data/processed/item_stats.pkl", "rb") as f:
@@ -100,8 +94,9 @@ async def load_model():
         print("✓ All models loaded successfully")
         
     except Exception as e:
-        print(f"✗ Failed to load model: {e}")
-        raise
+        print(f"Error during startup: {e}")
+        import traceback
+        traceback.print_exc()
 
 @app.get("/health")
 async def health():
