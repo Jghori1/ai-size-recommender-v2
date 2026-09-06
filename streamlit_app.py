@@ -10,21 +10,6 @@ from src.inference import recommend_size
 
 st.set_page_config(page_title="AI Size & Fit Recommender", layout="wide")
 
-# Custom styling
-st.markdown("""
-    <style>
-    .main {
-        padding: 20px;
-    }
-    .stMetric {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #1f77e5;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 st.title("👗 Size & Fit Recommender")
 st.markdown("### Find Your Perfect Clothing Size with AI")
 st.write("Enter your measurements and item details below to get a personalized size recommendation.")
@@ -149,7 +134,7 @@ with col6:
 st.markdown("---")
 
 # Predict button
-st.subheader("�� Get Your Recommendation")
+st.subheader("🔮 Get Your Recommendation")
 if st.button("✨ Find My Perfect Size", use_container_width=True, key="predict_btn"):
     try:
         cup_map = {"AA": 0.5, "A": 1, "B": 2, "C": 3, "D": 4, "DD": 5, "DDD": 6, "E": 5, "F": 6, "G": 7, "H": 8, "I": 9, "J": 10}
@@ -186,25 +171,22 @@ if st.button("✨ Find My Perfect Size", use_container_width=True, key="predict_
         
         with col_rec:
             st.metric(
-                "Recommended Size",
-                result['recommended_size'],
-                help="The size that best fits your measurements"
+                "📏 Recommended Size",
+                result['recommended_size']
             )
         
         with col_conf:
             confidence_pct = f"{result['confidence']:.1%}"
             st.metric(
-                "Confidence Level",
-                confidence_pct,
-                help="How confident the model is in this recommendation"
+                "🎯 Confidence Level",
+                confidence_pct
             )
         
         with col_known:
             status = "✅ Yes" if result['item_known'] else "❌ No"
             st.metric(
-                "Item Database",
-                status,
-                help="Whether this item is in our rental database"
+                "📊 In Database",
+                status
             )
         
         st.markdown("---")
@@ -214,19 +196,14 @@ if st.button("✨ Find My Perfect Size", use_container_width=True, key="predict_
             st.write("If the recommended size doesn't fit perfectly, try these alternatives:")
             
             for alt in result['alternatives'][:3]:
-                col_alt = st.columns([2, 1])
-                with col_alt[0]:
-                    st.write(f"**Size {alt['size']}**")
-                with col_alt[1]:
-                    st.write(f"{alt['confidence']:.1%} match")
+                st.write(f"• **Size {alt['size']}** — {alt['confidence']:.1%} match")
         
         st.markdown("---")
-        st.info("💡 **Tip:** Sizing can vary by brand and style. Always check the item's specific size guide if available!")
+        st.info("�� **Tip:** Sizing can vary by brand and style. Always check the item's specific size guide if available!")
     
     except Exception as e:
         st.error(f"❌ Something went wrong: {str(e)}")
         st.write("Please check your inputs and try again.")
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: gray;'>Made with ❤️ | Powered by Machine Learning | Random Forest Model</p>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray; font-size: 12px;'>Your measurements are processed locally and never stored.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Made with ❤️ | Powered by Machine Learning</p>", unsafe_allow_html=True)
