@@ -1,0 +1,28 @@
+{
+  "model_type": "RandomForest",
+  "n_estimators": 300,
+  "features": [
+    "height_in",
+    "weight_lb",
+    "bmi",
+    "weight_per_inch",
+    "bust_band",
+    "bust_cup",
+    "bust_total",
+    "age",
+    "size",
+    "size_delta",
+    "item_avg_fit_size",
+    "item_fit_count",
+    "item_txn_count",
+    "item_size_std",
+    "item_is_known",
+    "body_type",
+    "category",
+    "rented_for"
+  ],
+  "baseline_macro_f1": 0.2831,
+  "model_macro_f1": 0.5087505299952496,
+  "improvement": 0.2256505299952496,
+  "version": "v1.0.0"
+}
