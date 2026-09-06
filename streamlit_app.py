@@ -3,6 +3,10 @@ import joblib
 import pickle
 import sys
 import os
+from PIL import Image
+from io import BytesIO
+import requests
+
 sys.path.insert(0, '.')
 
 from src.inference import recommend_size
@@ -17,7 +21,6 @@ st.write("Get personalized clothing size recommendations based on your measureme
 def load_models():
     print("Loading models...")
     
-    # Download model from Google Drive if not local
     model_path = "models/size_model_rf.joblib"
     if not os.path.exists(model_path):
         print("Downloading model from Google Drive...")
@@ -51,33 +54,66 @@ FEATURE_COLS = [
     "body_type", "category", "rented_for",
 ]
 
+# Fetch image from Pexels
+@st.cache_data
+def get_clothing_image(category):
+    try:
+        api_key = st.secrets.get("PEXELS_API_KEY")
+        if not api_key:
+            return None
+        
+        url = "https://api.pexels.com/v1/search"
+        headers = {"Authorization": api_key}
+        params = {"query": f"{category} clothing fashion", "per_page": 1}
+        
+        response = requests.get(url, headers=headers, params=params, timeout=5)
+        if response.status_code == 200:
+            photos = response.json().get('photos', [])
+            if photos:
+                return photos[0]['src']['medium']
+    except Exception as e:
+        print(f"Error fetching image: {e}")
+    
+    return None
+
 # User inputs
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns([1, 1, 1.2])
 
 with col1:
-    st.subheader("Your Measurements")
+    st.subheader("👤 Your Measurements")
     height = st.slider("Height (inches)", 48, 84, 66)
     weight = st.slider("Weight (lbs)", 70, 400, 130)
     bust_band = st.slider("Bust Band", 28, 52, 34)
     bust_cup = st.select_slider("Bust Cup", ["AA", "A", "B", "C", "D", "DD", "DDD", "E", "F", "G", "H", "I", "J"], value="C")
 
 with col2:
-    st.subheader("Additional Info")
+    st.subheader("ℹ️ Additional Info")
     age = st.number_input("Age", 12, 95, 26)
     body_type = st.selectbox("Body Type", ["hourglass", "pear", "apple", "rectangle", "unknown"])
     rented_for = st.selectbox("Rented For", ["party", "casual", "work", "wedding", "other"])
 
-st.subheader("Item Details")
-col3, col4 = st.columns(2)
-
 with col3:
+    st.subheader("👗 Item Details")
     item_id = st.text_input("Item ID", "126335")
     category = st.selectbox("Category", ["dress", "top", "bottom", "jacket", "intimate"])
+    
+    # Display item image from Pexels
+    img_url = get_clothing_image(category)
+    if img_url:
+        try:
+            response = requests.get(img_url, timeout=5)
+            if response.status_code == 200:
+                img = Image.open(BytesIO(response.content))
+                st.image(img, caption=f"{category.title()}", use_column_width=True)
+        except Exception as e:
+            st.info(f"📸 {category.title()}")
+    else:
+        st.info(f"📸 {category.title()}")
 
 # Predict button
-if st.button("🔮 Get Size Recommendation", use_container_width=True):
+st.markdown("---")
+if st.button("🔮 Get Size Recommendation", use_container_width=True, key="predict_btn"):
     try:
-        # Convert bust cup to number
         cup_map = {"AA": 0.5, "A": 1, "B": 2, "C": 3, "D": 4, "DD": 5, "DDD": 6, "E": 5, "F": 6, "G": 7, "H": 8, "I": 9, "J": 10}
         bust_cup_num = cup_map.get(bust_cup, 3)
         
@@ -103,27 +139,26 @@ if st.button("🔮 Get Size Recommendation", use_container_width=True):
             feature_cols=FEATURE_COLS,
         )
         
-        # Display results
         st.success("✅ Prediction Complete!")
         
-        col5, col6, col7 = st.columns(3)
+        col_rec, col_conf, col_known = st.columns(3)
         
-        with col5:
-            st.metric("Recommended Size", result['recommended_size'])
+        with col_rec:
+            st.metric("📏 Recommended Size", result['recommended_size'])
         
-        with col6:
-            st.metric("Confidence", f"{result['confidence']:.1%}")
+        with col_conf:
+            st.metric("🎯 Confidence", f"{result['confidence']:.1%}")
         
-        with col7:
-            st.metric("Item Known?", "Yes" if result['item_known'] else "No")
+        with col_known:
+            st.metric("📊 Item Known?", "Yes" if result['item_known'] else "No")
         
         if result['alternatives']:
-            st.subheader("Alternative Sizes")
+            st.subheader("📋 Alternative Sizes")
             for alt in result['alternatives'][:3]:
-                st.write(f"• Size {alt['size']}: {alt['confidence']:.1%} confidence")
+                st.write(f"• Size **{alt['size']}**: {alt['confidence']:.1%} confidence")
     
     except Exception as e:
         st.error(f"❌ Error: {str(e)}")
 
 st.markdown("---")
-st.markdown("Made with ❤️ | ML Model: Random Forest Classifier")
+st.markdown("<p style='text-align: center'>Made with ❤️ using Streamlit | ML Model: Random Forest Classifier</p>", unsafe_allow_html=True)
