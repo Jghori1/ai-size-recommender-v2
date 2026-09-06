@@ -1,10 +1,8 @@
 .venv/
 venv/
 data/raw/
-data/processed/
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 .DS_Store
 .env
-models/size_model_rf.joblib
