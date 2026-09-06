@@ -1,0 +1,112 @@
+import streamlit as st
+import joblib
+import pickle
+import sys
+sys.path.insert(0, '.')
+
+from src.inference import recommend_size
+
+st.set_page_config(page_title="AI Size & Fit Recommender", layout="wide")
+
+st.title("🎀 AI Size & Fit Recommender")
+st.write("Get personalized clothing size recommendations based on your measurements")
+
+# Load model and data
+@st.cache_resource
+def load_models():
+    print("Loading model...")
+    MODEL = joblib.load("models/size_model_rf.joblib")
+    
+    print("Loading item stats...")
+    with open("data/processed/item_stats.pkl", "rb") as f:
+        ITEM_STATS, CAT_STATS, GLOBAL_AVG = pickle.load(f)
+    
+    return MODEL, ITEM_STATS, CAT_STATS, GLOBAL_AVG
+
+MODEL, ITEM_STATS, CAT_STATS, GLOBAL_AVG = load_models()
+
+FEATURE_COLS = [
+    "height_in", "weight_lb", "bmi", "weight_per_inch",
+    "bust_band", "bust_cup", "bust_total", "age",
+    "size", "size_delta",
+    "item_avg_fit_size", "item_fit_count", "item_txn_count",
+    "item_size_std", "item_is_known",
+    "body_type", "category", "rented_for",
+]
+
+# User inputs
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("Your Measurements")
+    height = st.slider("Height (inches)", 48, 84, 66)
+    weight = st.slider("Weight (lbs)", 70, 400, 130)
+    bust_band = st.slider("Bust Band", 28, 52, 34)
+    bust_cup = st.select_slider("Bust Cup", ["AA", "A", "B", "C", "D", "DD", "DDD", "E", "F", "G", "H", "I", "J"], value="C")
+
+with col2:
+    st.subheader("Additional Info")
+    age = st.number_input("Age", 12, 95, 26)
+    body_type = st.selectbox("Body Type", ["hourglass", "pear", "apple", "rectangle", "unknown"])
+    rented_for = st.selectbox("Rented For", ["party", "casual", "work", "wedding", "other"])
+
+st.subheader("Item Details")
+col3, col4 = st.columns(2)
+
+with col3:
+    item_id = st.text_input("Item ID", "126335")
+    category = st.selectbox("Category", ["dress", "top", "bottom", "jacket", "intimate"])
+
+# Predict button
+if st.button("🔮 Get Size Recommendation", use_container_width=True):
+    try:
+        # Convert bust cup to number
+        cup_map = {"AA": 0.5, "A": 1, "B": 2, "C": 3, "D": 4, "DD": 5, "DDD": 6, "E": 5, "F": 6, "G": 7, "H": 8, "I": 9, "J": 10}
+        bust_cup_num = cup_map.get(bust_cup, 3)
+        
+        user_measurements = {
+            "height_in": float(height),
+            "weight_lb": float(weight),
+            "bust_band": float(bust_band),
+            "bust_cup": bust_cup_num,
+            "age": int(age),
+            "body_type": body_type,
+            "rented_for": rented_for,
+        }
+        
+        result = recommend_size(
+            model=MODEL,
+            user_measurements=user_measurements,
+            item_id=item_id,
+            item_category=category,
+            candidate_sizes=[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+            item_stats=ITEM_STATS,
+            cat_stats=CAT_STATS,
+            global_avg=GLOBAL_AVG,
+            feature_cols=FEATURE_COLS,
+        )
+        
+        # Display results
+        st.success("✅ Prediction Complete!")
+        
+        col5, col6, col7 = st.columns(3)
+        
+        with col5:
+            st.metric("Recommended Size", result['recommended_size'])
+        
+        with col6:
+            st.metric("Confidence", f"{result['confidence']:.1%}")
+        
+        with col7:
+            st.metric("Item Known?", "Yes" if result['item_known'] else "No")
+        
+        if result['alternatives']:
+            st.subheader("Alternative Sizes")
+            for alt in result['alternatives'][:3]:
+                st.write(f"• Size {alt['size']}: {alt['confidence']:.1%} confidence")
+    
+    except Exception as e:
+        st.error(f"❌ Error: {str(e)}")
+
+st.markdown("---")
+st.markdown("Made with ❤️ | ML Model: Random Forest Classifier")
